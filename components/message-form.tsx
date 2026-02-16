@@ -1,32 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { saveMessage } from "@/actions/save-message";
+import { useState, useTransition } from "react";
+import { aiReply } from "@/actions/ai-reply";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function MessageForm({ userId }: { userId: string }) {
   const [text, setText] = useState("");
+  const [isPending, startTransition] = useTransition();
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!text.trim() || isPending) return;
 
-    if (!text.trim()) return;
-
-    await saveMessage(userId, "user", text);
+    const currentText = text;
     setText("");
 
-    // reload to show new message
-    window.location.reload();
+    startTransition(async () => {
+      try {
+        await aiReply(userId, currentText);
+      } catch (error) {
+        console.error("Failed to send message:", error);
+        setText(currentText);
+      }
+    });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <input
+    <form onSubmit={handleSubmit} className="flex gap-2 mt-4">
+      <Input
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Type a message..."
-        className="border px-3 py-2 rounded w-full"
+        disabled={isPending}
+        className="flex-1"
       />
-      <button className="border px-4 py-2 rounded">Send</button>
+      <Button type="submit" disabled={isPending || !text.trim()}>
+        {isPending ? "Thinking..." : "Send"}
+      </Button>
     </form>
   );
 }

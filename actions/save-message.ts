@@ -2,6 +2,7 @@
 
 import { db } from "@/db";
 import { messages } from "@/db/schema";
+import { revalidatePath } from "next/cache";
 
 export async function saveMessage(
   userId: string,
@@ -13,4 +14,5 @@ export async function saveMessage(
     role,
     content,
   });
+  revalidatePath("/chat");
 }

@@ -9,7 +9,8 @@ export default async function ChatPage() {
 
   if (!session) redirect("/");
 
-  const userId = session.user?.email!;
+  const userId = session.user?.email;
+  if (!userId) redirect("/");
   const history = await getMessages(userId);
 
   return (
@@ -21,9 +22,7 @@ export default async function ChatPage() {
         <LogoutButton />
       </div>
       <div>
-        <p>Logged in as: {session.user?.email}</p>
-      </div>
-      <div className="p-4 space-y-2">
+        {history.length === 0 && <p>No messages yet.</p>}
         {history.map((msg) => (
           <div key={msg.id}>
             <b>{msg.role}:</b> {msg.content}
