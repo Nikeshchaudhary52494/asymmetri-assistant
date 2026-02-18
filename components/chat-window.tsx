@@ -4,6 +4,7 @@ import { useChat } from "ai/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
 
 type InitialMessage = {
   id: string;
@@ -21,26 +22,21 @@ export function ChatWindow({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: "/api/chat",
-    initialMessages: initialMessages.map((m) => ({
-      id: m.id,
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    })),
-    body: {},
-    // Send the message text in the body
-    onFinish: () => {
-      inputRef.current?.focus();
-    },
-  });
+  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+    useChat({
+      api: "/api/chat",
+      initialMessages: initialMessages.map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
+      onFinish: () => inputRef.current?.focus(),
+    });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // useChat sends { messages } by default, but our route expects { message }
-  // We need a custom submit handler:
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -48,24 +44,27 @@ export function ChatWindow({
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
-      <div className="flex-1 overflow-y-auto space-y-3 mb-4 pr-1">
+    <div className="flex flex-col flex-1 bg-muted/30 rounded-xl overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {messages.length === 0 && (
-          <p className="text-muted-foreground text-sm">
-            No messages yet. Ask about weather, stocks, or F1!
-          </p>
+          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+            Start chatting with Asymmetri AI! Ask me anything or share your
+            thoughts.
+          </div>
         )}
 
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${
+              msg.role === "user" ? "justify-end" : "justify-start"
+            }`}
           >
             <div
-              className={`rounded-lg px-4 py-2 max-w-[75%] text-sm whitespace-pre-wrap ${
+              className={`max-w-[70%] rounded-lg px-4 py-2 text-sm whitespace-pre-wrap shadow-sm ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-foreground"
+                  : "bg-background border"
               }`}
             >
               {msg.content}
@@ -73,10 +72,11 @@ export function ChatWindow({
           </div>
         ))}
 
-        {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+        {isLoading && (
           <div className="flex justify-start">
-            <div className="rounded-lg px-4 py-2 bg-muted text-foreground text-sm">
-              <span className="animate-pulse">Thinking...</span>
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Thinking…
             </div>
           </div>
         )}
@@ -84,18 +84,21 @@ export function ChatWindow({
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleFormSubmit} className="flex gap-2">
-        <Input
-          ref={inputRef}
-          value={input}
-          onChange={handleInputChange}
-          placeholder="Ask about weather, stocks, F1..."
-          disabled={isLoading}
-          className="flex-1"
-        />
-        <Button type="submit" disabled={isLoading || !input.trim()}>
-          {isLoading ? "Thinking..." : "Send"}
-        </Button>
+      <form onSubmit={handleFormSubmit} className="p-4 bg-background border-t">
+        <div className="flex gap-2 max-w-5xl mx-auto">
+          <Input
+            ref={inputRef}
+            value={input}
+            onChange={handleInputChange}
+            placeholder="Type a message..."
+            disabled={isLoading}
+            className="flex-1"
+          />
+
+          <Button type="submit" disabled={isLoading || !input.trim()}>
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send"}
+          </Button>
+        </div>
       </form>
     </div>
   );
