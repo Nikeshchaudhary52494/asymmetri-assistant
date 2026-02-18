@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
-import { aiReply } from "@/actions/ai-reply";
+import { useChat } from "ai/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useEffect, useRef } from "react";
 
-type Message = {
+type InitialMessage = {
   id: string;
   role: string;
   content: string;
@@ -13,72 +13,39 @@ type Message = {
 
 export function ChatWindow({
   userId,
-
   initialMessages,
 }: {
   userId: string;
-
-  initialMessages: Message[];
+  initialMessages: InitialMessage[];
 }) {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-
-  const [text, setText] = useState("");
-
-  const [isPending, startTransition] = useTransition();
-
   const bottomRef = useRef<HTMLDivElement>(null);
-
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+    api: "/api/chat",
+    initialMessages: initialMessages.map((m) => ({
+      id: m.id,
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })),
+    body: {},
+    // Send the message text in the body
+    onFinish: () => {
+      inputRef.current?.focus();
+    },
+  });
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isPending]);
+  }, [messages, isLoading]);
 
-  useEffect(() => {
-    if (!isPending) inputRef.current?.focus();
-  }, [isPending]);
-
-  function handleSubmit(e: React.FormEvent) {
+  // useChat sends { messages } by default, but our route expects { message }
+  // We need a custom submit handler:
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!text.trim() || isPending) return;
-
-    const currentText = text;
-
-    setText("");
-
-    const optimisticUser: Message = {
-      id: crypto.randomUUID(),
-
-      role: "user",
-
-      content: currentText,
-    };
-
-    setMessages((prev) => [...prev, optimisticUser]);
-
-    startTransition(async () => {
-      try {
-        const reply = await aiReply(userId, currentText);
-
-        const assistantMsg: Message = {
-          id: crypto.randomUUID(),
-
-          role: "assistant",
-
-          content: reply,
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
-      } catch (error) {
-        console.error("Failed to send message:", error);
-
-        setMessages((prev) => prev.filter((m) => m.id !== optimisticUser.id));
-
-        setText(currentText);
-      }
-    });
-  }
+    if (!input.trim() || isLoading) return;
+    handleSubmit(e, { body: { message: input } });
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -106,7 +73,7 @@ export function ChatWindow({
           </div>
         ))}
 
-        {isPending && (
+        {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex justify-start">
             <div className="rounded-lg px-4 py-2 bg-muted text-foreground text-sm">
               <span className="animate-pulse">Thinking...</span>
@@ -117,18 +84,17 @@ export function ChatWindow({
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleFormSubmit} className="flex gap-2">
         <Input
           ref={inputRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          value={input}
+          onChange={handleInputChange}
           placeholder="Ask about weather, stocks, F1..."
-          disabled={isPending}
+          disabled={isLoading}
           className="flex-1"
         />
-
-        <Button type="submit" disabled={isPending || !text.trim()}>
-          {isPending ? "Thinking..." : "Send"}
+        <Button type="submit" disabled={isLoading || !input.trim()}>
+          {isLoading ? "Thinking..." : "Send"}
         </Button>
       </form>
     </div>
