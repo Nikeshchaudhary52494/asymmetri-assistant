@@ -1,5 +1,5 @@
 export async function getF1NextRace() {
-  const res = await fetch("http://api.jolpi.ca/ergast/f1/current/next.json", {
+  const res = await fetch("https://api.jolpi.ca/ergast/f1/current/next.json", {
     next: { revalidate: 3600 },
   });
 

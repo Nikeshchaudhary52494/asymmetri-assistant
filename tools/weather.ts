@@ -1,34 +1,31 @@
 export async function getWeather(location: string) {
-  const geoRes = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`,
-  );
+  const apiKey = process.env.OPENWEATHER_API_KEY;
 
-  if (!geoRes.ok) {
-    throw new Error(`Geocoding API error: ${geoRes.status}`);
+  if (!apiKey) {
+    throw new Error("OPENWEATHER_API_KEY is not set");
   }
 
-  const geo = await geoRes.json();
+  const res = await fetch(
+    `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${apiKey}&units=metric`,
+  );
 
-  if (!geo.results?.length) {
+  if (res.status === 404) {
     throw new Error(`Location "${location}" not found`);
   }
 
-  const { latitude, longitude, name, country } = geo.results[0];
-
-  const weatherRes = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current_weather=true`,
-  );
-
-  if (!weatherRes.ok) {
-    throw new Error(`Weather API error: ${weatherRes.status}`);
+  if (!res.ok) {
+    throw new Error(`OpenWeather API error: ${res.status}`);
   }
 
-  const weather = await weatherRes.json();
+  const data = await res.json();
 
   return {
-    location: `${name}, ${country}`,
-    temperature: weather.current_weather.temperature,
-    windspeed: weather.current_weather.windspeed,
+    location: `${data.name}, ${data.sys.country}`,
+    temperature: Math.round(data.main.temp),
+    feelsLike: Math.round(data.main.feels_like),
+    humidity: data.main.humidity,
+    windspeed: data.wind.speed,
+    description: data.weather[0].description,
     unit: "°C",
   };
 }

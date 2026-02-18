@@ -12,6 +12,11 @@ export default async function ChatPage() {
   if (!userId) redirect("/");
 
   const history = await getMessages(userId);
+  const serializedHistory = history.map((msg) => ({
+    id: msg.id,
+    role: msg.role,
+    content: msg.content,
+  }));
 
   return (
     <main className="h-screen flex flex-col max-w-5xl mx-auto px-4 py-4">
@@ -22,7 +27,7 @@ export default async function ChatPage() {
         <LogoutButton />
       </header>
 
-      <ChatWindow userId={userId} initialMessages={history} />
+      <ChatWindow userId={userId} initialMessages={serializedHistory} />
     </main>
   );
 }
